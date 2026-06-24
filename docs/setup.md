@@ -8,7 +8,7 @@
 ## Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pulsegrid.git
+git clone https://github.com/Rohan5commit/pulsegrid.git
 cd pulsegrid
 npm install
 ```

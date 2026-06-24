@@ -39,7 +39,7 @@ Each incident is scored using 8 weighted factors:
 ## Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pulsegrid.git
+git clone https://github.com/Rohan5commit/pulsegrid.git
 cd pulsegrid
 npm install
 cp .env.example .env.local  # Add your NIM_API_KEY
