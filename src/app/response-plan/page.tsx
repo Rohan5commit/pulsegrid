@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/loading-states";
-import { ALL_SIGNALS, DEMO_ENRICHED_CONTEXTS, DEMO_RESPONSE_PLANS, DEMO_IMPACT_SUMMARY, SCENARIO_PRESETS } from "@/lib/schemas/demo-data";
+import { ALL_SIGNALS, DEMO_ENRICHED_CONTEXTS, DEMO_RESPONSE_PLANS } from "@/lib/schemas/demo-data";
 import { normalizeSignals } from "@/lib/normalization";
 import { rankIssues } from "@/lib/ranking";
 import { generateHandoffNote } from "@/lib/planning";
