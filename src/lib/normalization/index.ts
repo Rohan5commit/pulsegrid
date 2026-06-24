@@ -23,9 +23,6 @@ const URGENCY_MAP: Record<string, NormalizedIssue["urgency"]> = {
 };
 
 export function normalizeSignal(signal: IncidentSignal): NormalizedIssue {
-  const age = Date.now() - new Date(signal.reportedAt).getTime();
-  const ageHours = age / 3600000;
-
   let cascadingRisk = 5;
   if (signal.category === "water-outage" || signal.category === "power-cut") cascadingRisk = 8;
   if (signal.category === "medical-urgency") cascadingRisk = 9;

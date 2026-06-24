@@ -258,9 +258,9 @@ export async function generateImpactSummary(
       (i) => `${i.populationAffected.toLocaleString()} residents – ${i.title}`
     ),
     readinessLevel:
-      priorities[0]?.score ?? 0 > 80
+      (priorities[0]?.score ?? 0) > 80
         ? "Critical – immediate action required"
-        : priorities[0]?.score ?? 0 > 60
+        : (priorities[0]?.score ?? 0) > 60
         ? "Urgent – rapid response needed"
         : "Moderate – monitor and plan",
     actionCoverage: Math.round((issues.length / (issues.length + 2)) * 100),
