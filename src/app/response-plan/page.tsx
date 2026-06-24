@@ -8,7 +8,6 @@ import { Spinner } from "@/components/loading-states";
 import { ALL_SIGNALS, DEMO_ENRICHED_CONTEXTS, DEMO_RESPONSE_PLANS, DEMO_IMPACT_SUMMARY, SCENARIO_PRESETS } from "@/lib/schemas/demo-data";
 import { normalizeSignals } from "@/lib/normalization";
 import { rankIssues } from "@/lib/ranking";
-import { generateAlertDrafts } from "@/lib/ai";
 import { generateHandoffNote } from "@/lib/planning";
 import type { NormalizedIssue, PriorityScore, EnrichedContext, ResponsePlan, AlertDraft } from "@/lib/schemas";
 import { CheckCircle, AlertTriangle, Clock, Users, ArrowLeft, MessageSquare, ClipboardList } from "lucide-react";
@@ -36,6 +35,7 @@ function ResponsePlanInner() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function loadAlerts() {
     const signals = ALL_SIGNALS[scenarioId] ?? [];
     const normalized = normalizeSignals(signals);
     const ranked = rankIssues(normalized);
@@ -44,20 +44,36 @@ function ResponsePlanInner() {
     setEnrichments(DEMO_ENRICHED_CONTEXTS[scenarioId] ?? []);
     setPlans(DEMO_RESPONSE_PLANS[scenarioId] ?? []);
 
-    // Generate fallback alerts for all plans
+    // Generate alerts via server-side API
     const allPlans = DEMO_RESPONSE_PLANS[scenarioId] ?? [];
-    const fallbackAlerts: AlertDraft[] = allPlans.map((plan) => {
-      const issue = normalized.find((i) => i.id === plan.issueId);
-      return {
-        issueId: plan.issueId,
-        residentAlert: `⚠️ ${issue?.title ?? "Incident"} reported in ${issue?.location ?? "your area"}. ${plan.residentInstructions}`,
-        volunteerMessage: `Volunteers needed: ${plan.recommendedTeam}. Report to ${issue?.location ?? "location"}. Resources: ${plan.requiredResources.join(", ")}.`,
-        operationsHandoff: `${issue?.title ?? "Incident"} – ${(issue?.severity ?? "high").toUpperCase()}. Action: ${plan.immediateAction}. Team: ${plan.recommendedTeam}.`,
-        statusUpdate: `UPDATE: ${issue?.title ?? "Incident"} – Response team deployed. ${plan.twentyFourHourNote}`,
-      };
-    });
-    setAlerts(fallbackAlerts);
+    const fetchedAlerts: AlertDraft[] = [];
+    for (const p of allPlans) {
+      const matchedIssue = normalized.find((i) => i.id === p.issueId);
+      if (matchedIssue) {
+        try {
+          const res = await fetch("/api/alerts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ issue: matchedIssue, plan: p }),
+          });
+          const data = await res.json();
+          fetchedAlerts.push({ ...data, issueId: p.issueId });
+        } catch {
+          // Fallback if API fails
+          fetchedAlerts.push({
+            issueId: p.issueId,
+            residentAlert: `⚠️ ${matchedIssue.title} reported in ${matchedIssue.location}. ${p.residentInstructions}`,
+            volunteerMessage: `Volunteers needed: ${p.recommendedTeam}. Report to ${matchedIssue.location}. Resources: ${p.requiredResources.join(", ")}.`,
+            operationsHandoff: `${matchedIssue.title} – ${matchedIssue.severity.toUpperCase()}. Action: ${p.immediateAction}. Team: ${p.recommendedTeam}.`,
+            statusUpdate: `UPDATE: ${matchedIssue.title} – Response team deployed. ${p.twentyFourHourNote}`,
+          });
+        }
+      }
+    }
+    setAlerts(fetchedAlerts);
     setLoading(false);
+    }
+    loadAlerts();
   }, [scenarioId]);
 
   const targetIssueId = issueId ?? priorities[0]?.issueId;

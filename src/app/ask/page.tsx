@@ -8,7 +8,6 @@ import { Spinner } from "@/components/loading-states";
 import { ALL_SIGNALS, DEMO_RESPONSE_PLANS } from "@/lib/schemas/demo-data";
 import { normalizeSignals } from "@/lib/normalization";
 import { rankIssues } from "@/lib/ranking";
-import { askPulseGrid } from "@/lib/ai";
 import type { NormalizedIssue, PriorityScore, ResponsePlan, AgentExplanation } from "@/lib/schemas";
 import { Send, Bot, User, HelpCircle } from "lucide-react";
 
@@ -65,10 +64,15 @@ function AskPageInner() {
     setLoading(true);
 
     try {
-      const result = await askPulseGrid(question, issues, priorities, plans);
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, issues, priorities, plans }),
+      });
+      const result = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: result.answer, sources: result.sources },
+        { role: "assistant", content: result.answer ?? "I couldn't process that question.", sources: result.sources ?? [] },
       ]);
     } catch {
       setMessages((prev) => [
