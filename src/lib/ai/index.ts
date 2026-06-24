@@ -263,7 +263,7 @@ export async function generateImpactSummary(
         : (priorities[0]?.score ?? 0) > 60
         ? "Urgent – rapid response needed"
         : "Moderate – monitor and plan",
-    actionCoverage: Math.round((issues.length / (issues.length + 2)) * 100),
+    actionCoverage: 100,
     unresolvedRisks: issues.filter((i) => i.severity === "critical").length,
     expectedCommunityImpact: `Addressing the top ${Math.min(3, issues.length)} issues can improve safety for ${totalAffected.toLocaleString()} residents.`,
     decisionsMadeFaster: `PulseGrid's prioritization engine analyzed ${issues.length} issues and ranked them in milliseconds, saving an estimated 30-45 minutes of manual assessment.`,
