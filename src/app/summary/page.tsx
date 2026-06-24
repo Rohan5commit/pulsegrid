@@ -56,7 +56,7 @@ function SummaryInner() {
           <span className="gradient-text">Impact & Readiness Summary</span>
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-2)]">
-          Scenario: {scenarioId.replace("-", " + ").replace(/\b\w/g, (c) => c.toUpperCase())}
+          Scenario: {scenarioId.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" + ")}
         </p>
       </div>
 

@@ -97,7 +97,7 @@ function AskPageInner() {
       {/* Scenario Badge */}
       <div className="mb-4">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-text-2)]">
-          Scenario: {scenarioId.replace("-", " + ").replace(/\b\w/g, (c) => c.toUpperCase())}
+          Scenario: {scenarioId.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" + ")}
         </span>
       </div>
 
