@@ -424,7 +424,7 @@ export const DEMO_IMPACT_SUMMARY: Record<string, ImpactSummary> = {
     actionCoverage: 40,
     unresolvedRisks: 3,
     expectedCommunityImpact: "If actions are taken within the next 2 hours, we can prevent an estimated 15-20 heat-related hospitalizations and maintain water service for 80% of affected households.",
-    decisionsMadeFaster: "PulseGrid identified the water outage as the #1 priority over heat advisory due to compounding risk – saving an estimated 45 minutes of assessment time.",
+    decisionsMadeFaster: "PulseGrid scored 5 issues across 8 weighted factors in under 50ms, surfacing the water outage as top priority without manual triage.",
   },
   "flood-traffic": {
     topPriorities: [
@@ -442,7 +442,7 @@ export const DEMO_IMPACT_SUMMARY: Record<string, ImpactSummary> = {
     actionCoverage: 75,
     unresolvedRisks: 1,
     expectedCommunityImpact: "Immediate evacuation of 3,100 residents can prevent flood-related injuries. Power stabilization at medical campus protects critical care patients.",
-    decisionsMadeFaster: "PulseGrid ranked flood evacuation above medical power issues due to time-to-impact analysis – enabling faster resource allocation.",
+    decisionsMadeFaster: "PulseGrid scored 4 issues across 8 weighted factors in under 50ms, surfacing flood evacuation as top priority without manual triage.",
   },
   "blackout-medical": {
     topPriorities: [
@@ -460,6 +460,6 @@ export const DEMO_IMPACT_SUMMARY: Record<string, ImpactSummary> = {
     actionCoverage: 75,
     unresolvedRisks: 1,
     expectedCommunityImpact: "Immediate patient transfer protects 12 lives. Campus-wide coordination prevents secondary casualties from heat, dehydration, or falls.",
-    decisionsMadeFaster: "PulseGrid identified the dialysis center as the #1 priority over the campus-wide blackout due to immediate life-safety threat – saving critical decision time.",
+    decisionsMadeFaster: "PulseGrid scored 4 issues across 8 weighted factors in under 50ms, surfacing the dialysis center transfer as top priority without manual triage.",
   },
 };

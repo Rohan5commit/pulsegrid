@@ -266,6 +266,6 @@ export async function generateImpactSummary(
     actionCoverage: 100,
     unresolvedRisks: issues.filter((i) => i.severity === "critical").length,
     expectedCommunityImpact: `Addressing the top ${Math.min(3, issues.length)} issues can improve safety for ${totalAffected.toLocaleString()} residents.`,
-    decisionsMadeFaster: `PulseGrid's prioritization engine analyzed ${issues.length} issues and ranked them in milliseconds, saving an estimated 30-45 minutes of manual assessment.`,
+    decisionsMadeFaster: `PulseGrid scored ${issues.length} issues across 8 weighted factors in under 50ms, surfacing the top priority without manual triage.`,
   };
 }
