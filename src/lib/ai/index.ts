@@ -35,12 +35,12 @@ async function callNIM(systemPrompt: string, userPrompt: string): Promise<string
 }
 
 function parseJSONResponse<T>(raw: string, fallback: T): T {
+  try { return JSON.parse(raw) as T; } catch {}
   try {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]) as T;
-  } catch {
-    // fall through
-  }
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start !== -1 && end > start) return JSON.parse(raw.slice(start, end + 1)) as T;
+  } catch {}
   return fallback;
 }
 
