@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# dev tooling files
+AGENTS.md
+CLAUDE.md
+
 # vercel
 .vercel
 
