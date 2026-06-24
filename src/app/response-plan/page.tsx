@@ -82,7 +82,7 @@ function ResponsePlanInner() {
   const enrichment = enrichments.find((e) => e.issueId === targetIssueId);
   const plan = plans.find((p) => p.issueId === targetIssueId);
   const alert = alerts.find((a) => a.issueId === targetIssueId);
-  const handoff = plan ? generateHandoffNote(plan, issue?.title ?? "", issue?.location ?? "") : null;
+  const handoff = plan ? generateHandoffNote(plan, issue?.title ?? "", issue?.location ?? "", issue?.urgency ?? "soon") : null;
 
   if (loading) return <Spinner size="lg" label="Generating response plan..." />;
 

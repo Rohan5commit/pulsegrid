@@ -1,6 +1,14 @@
 import type { ResponsePlan } from "../schemas";
 
-export function generateHandoffNote(plan: ResponsePlan, issueTitle: string, issueLocation: string) {
+const DEADLINES: Record<string, string> = {
+  immediate: "Next 30 minutes",
+  urgent: "Next 2 hours",
+  soon: "Next 6 hours",
+  planned: "Next 24–48 hours",
+  monitor: "Ongoing — review weekly",
+};
+
+export function generateHandoffNote(plan: ResponsePlan, issueTitle: string, issueLocation: string, urgency: string = "soon") {
   return {
     issueId: plan.issueId,
     summary: `${issueTitle} at ${issueLocation}. Immediate action: ${plan.immediateAction}`,
@@ -11,6 +19,6 @@ export function generateHandoffNote(plan: ResponsePlan, issueTitle: string, issu
       plan.escalationThreshold,
     ],
     owner: plan.recommendedTeam,
-    deadline: "Next 30 minutes",
+    deadline: DEADLINES[urgency] ?? "Next 2 hours",
   };
 }
