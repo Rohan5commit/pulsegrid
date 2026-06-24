@@ -9,7 +9,7 @@ import { ALL_SIGNALS, DEMO_RESPONSE_PLANS } from "@/lib/schemas/demo-data";
 import { normalizeSignals } from "@/lib/normalization";
 import { rankIssues } from "@/lib/ranking";
 import type { NormalizedIssue, PriorityScore, ResponsePlan, AgentExplanation } from "@/lib/schemas";
-import { Send, Bot, User, HelpCircle } from "lucide-react";
+import { Send, Bot, User } from "lucide-react";
 
 const SUGGESTED_QUESTIONS = [
   "Why is the water outage ranked above the traffic issue?",
