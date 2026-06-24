@@ -123,7 +123,7 @@ export default function DemoPage() {
           </div>
 
           {/* Detail Sidebar */}
-          <div className="sticky top-20 h-fit">
+          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
             {selectedIssueData && selectedPriority ? (
               <Card className="border-[var(--color-border)] bg-[var(--color-surface)] p-6">
                 <div className="mb-4 flex items-center gap-2">
