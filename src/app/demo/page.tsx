@@ -41,6 +41,10 @@ export default function DemoPage() {
   });
 
   const loadScenario = async (scenarioId: string) => {
+    if (!ALL_SIGNALS[scenarioId]) {
+      setState((s) => ({ ...s, loading: false, scenarioId, issues: [], priorities: [], enrichments: [], plans: [] }));
+      return;
+    }
     setState((s) => ({ ...s, loading: true, scenarioId }));
     const signals = ALL_SIGNALS[scenarioId] ?? [];
     const issues = normalizeSignals(signals);
@@ -207,9 +211,13 @@ export default function DemoPage() {
       {/* Empty State */}
       {!state.loading && state.issues.length === 0 && (
         <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-16 text-center">
-          <h3 className="mb-2 text-lg font-semibold">Select a Scenario</h3>
+          <h3 className="mb-2 text-lg font-semibold">
+            {state.scenarioId ? "Invalid Scenario" : "Select a Scenario"}
+          </h3>
           <p className="text-sm text-[var(--color-text-2)]">
-            Choose one of the three preset scenarios above to begin the demo.
+            {state.scenarioId
+              ? "Invalid scenario. Please select one below."
+              : "Choose one of the three preset scenarios above to begin the demo."}
           </p>
         </div>
       )}
