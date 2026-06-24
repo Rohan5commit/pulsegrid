@@ -36,42 +36,42 @@ function ResponsePlanInner() {
 
   useEffect(() => {
     async function loadAlerts() {
-    const signals = ALL_SIGNALS[scenarioId] ?? [];
-    const normalized = normalizeSignals(signals);
-    const ranked = rankIssues(normalized);
-    setIssues(normalized);
-    setPriorities(ranked);
-    setEnrichments(DEMO_ENRICHED_CONTEXTS[scenarioId] ?? []);
-    setPlans(DEMO_RESPONSE_PLANS[scenarioId] ?? []);
+      const signals = ALL_SIGNALS[scenarioId] ?? [];
+      const normalized = normalizeSignals(signals);
+      const ranked = rankIssues(normalized);
+      setIssues(normalized);
+      setPriorities(ranked);
+      setEnrichments(DEMO_ENRICHED_CONTEXTS[scenarioId] ?? []);
+      setPlans(DEMO_RESPONSE_PLANS[scenarioId] ?? []);
 
-    // Generate alerts via server-side API
-    const allPlans = DEMO_RESPONSE_PLANS[scenarioId] ?? [];
-    const fetchedAlerts: AlertDraft[] = [];
-    for (const p of allPlans) {
-      const matchedIssue = normalized.find((i) => i.id === p.issueId);
-      if (matchedIssue) {
-        try {
-          const res = await fetch("/api/alerts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ issue: matchedIssue, plan: p }),
-          });
-          const data = await res.json();
-          fetchedAlerts.push({ ...data, issueId: p.issueId });
-        } catch {
-          // Fallback if API fails
-          fetchedAlerts.push({
-            issueId: p.issueId,
-            residentAlert: `⚠️ ${matchedIssue.title} reported in ${matchedIssue.location}. ${p.residentInstructions}`,
-            volunteerMessage: `Volunteers needed: ${p.recommendedTeam}. Report to ${matchedIssue.location}. Resources: ${p.requiredResources.join(", ")}.`,
-            operationsHandoff: `${matchedIssue.title} – ${matchedIssue.severity.toUpperCase()}. Action: ${p.immediateAction}. Team: ${p.recommendedTeam}.`,
-            statusUpdate: `UPDATE: ${matchedIssue.title} – Response team deployed. ${p.twentyFourHourNote}`,
-          });
-        }
-      }
-    }
-    setAlerts(fetchedAlerts);
-    setLoading(false);
+      // Generate alerts via server-side API in parallel
+      const allPlans = DEMO_RESPONSE_PLANS[scenarioId] ?? [];
+      const alertResults = await Promise.all(
+        allPlans.map(async (p) => {
+          const matchedIssue = normalized.find((i) => i.id === p.issueId);
+          if (!matchedIssue) return null;
+          try {
+            const res = await fetch("/api/alerts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ issue: matchedIssue, plan: p }),
+            });
+            const data = await res.json();
+            return { ...data, issueId: p.issueId } as AlertDraft;
+          } catch {
+            // Fallback if API fails
+            return {
+              issueId: p.issueId,
+              residentAlert: `⚠️ ${matchedIssue.title} reported in ${matchedIssue.location}. ${p.residentInstructions}`,
+              volunteerMessage: `Volunteers needed: ${p.recommendedTeam}. Report to ${matchedIssue.location}. Resources: ${p.requiredResources.join(", ")}.`,
+              operationsHandoff: `${matchedIssue.title} – ${matchedIssue.severity.toUpperCase()}. Action: ${p.immediateAction}. Team: ${p.recommendedTeam}.`,
+              statusUpdate: `UPDATE: ${matchedIssue.title} – Response team deployed. ${p.twentyFourHourNote}`,
+            } as AlertDraft;
+          }
+        })
+      );
+      setAlerts(alertResults.filter(Boolean) as AlertDraft[]);
+      setLoading(false);
     }
     loadAlerts();
   }, [scenarioId]);
