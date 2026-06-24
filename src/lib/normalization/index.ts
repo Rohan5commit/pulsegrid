@@ -38,7 +38,7 @@ export function normalizeSignal(signal: IncidentSignal): NormalizedIssue {
   if (signal.category === "traffic-chokepoint") timeSensitivity = 4;
   if (signal.category === "waste-buildup") timeSensitivity = 2;
 
-  const resourceAvailability = Math.max(1, 10 - signal.serviceCriticality);
+  const resourceAvailability = signal.rawPayload?.resourceAvailability ?? 5;
 
   return {
     id: signal.id,
