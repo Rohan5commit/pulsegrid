@@ -116,7 +116,8 @@ function AskPageInner() {
                   <button
                     key={q}
                     onClick={() => handleAsk(q)}
-                    className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs text-[var(--color-text-2)] transition-colors hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text)]"
+                    disabled={loading}
+                    className={`rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs text-[var(--color-text-2)] transition-colors hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text)] ${loading ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     {q}
                   </button>
