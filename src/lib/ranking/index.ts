@@ -51,13 +51,13 @@ export function scoreIssue(
   const confidenceScore = issue.confidence * 10 * weights.confidence;
   const resourceScore = (10 - issue.resourceAvailability) * weights.resource;
 
-  const score = Math.round(
-    urgencyScore + severityScore + populationScore + cascadingScore + timeScore + criticalityScore + confidenceScore + resourceScore
-  );
+  const score = Math.min(100, Math.max(0, Math.round(
+    (urgencyScore + severityScore + populationScore + cascadingScore + timeScore + criticalityScore + confidenceScore + resourceScore) * 10
+  )));
 
   return {
     issueId: issue.id,
-    score: Math.min(100, Math.max(0, score)),
+    score,
     rank: 0,
     breakdown: {
       urgencyScore,
