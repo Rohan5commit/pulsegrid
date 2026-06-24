@@ -53,7 +53,7 @@ export function normalizeSignal(signal: IncidentSignal): NormalizedIssue {
     serviceCriticality: signal.serviceCriticality,
     cascadingRisk,
     timeSensitivity,
-    confidence: Math.min(0.95, 0.7 + (signal.populationAffected / 20000) * 0.25),
+    confidence: Math.min(0.95, 0.5 + (signal.populationAffected / 20000) * 0.45),
     resourceAvailability,
     reportedAt: signal.reportedAt,
     source: signal.source,
