@@ -63,22 +63,19 @@ export default function HomePage() {
     <div className="min-h-screen">
 
       {/* ===== HERO ===== */}
-      <section className="relative flex min-h-[85vh] items-center px-6">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-cyan-400">
+      <section className="relative flex min-h-[90vh] items-center px-6">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="mb-12 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-cyan-400">
             <Zap className="h-3.5 w-3.5" />
             FutureHacks 2026
           </div>
 
-          <h1 className="mb-8 text-6xl font-black tracking-tight sm:text-8xl lg:text-9xl">
+          <h1 className="mb-10 text-7xl font-black tracking-tight sm:text-8xl lg:text-9xl">
             <span className="gradient-text">PulseGrid</span>
           </h1>
 
-          <p className="mb-12 max-w-2xl text-2xl leading-relaxed text-slate-300 sm:text-3xl">
-            Future-city outage prediction
-            <br />
-            <span className="text-slate-600">&</span>{" "}
-            community response planning
+          <p className="mb-16 max-w-xl mx-auto text-xl leading-relaxed text-slate-400 sm:text-2xl">
+            Future-city outage prediction & community response planning
           </p>
 
           <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
@@ -96,39 +93,45 @@ export default function HomePage() {
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section className="px-6 py-32 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-20 text-center">
+      <section className="px-6 py-40 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-24 text-center">
             <span className="badge-neon badge-cyan mb-6 inline-flex">Workflow</span>
             <h2 className="mb-5 text-4xl font-bold text-white sm:text-5xl">How It Works</h2>
             <p className="text-lg text-slate-500">Four steps from detection to community action</p>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2">
             {STEPS.map((step, i) => {
               const Icon = step.icon;
-              const bgMap = {
+              const bgMap: Record<string, string> = {
                 cyan: "bg-cyan-500/10",
                 purple: "bg-purple-500/10",
                 rose: "bg-rose-500/10",
                 green: "bg-emerald-500/10",
               };
-              const textMap = {
+              const textMap: Record<string, string> = {
                 cyan: "text-cyan-400",
                 purple: "text-purple-400",
                 rose: "text-rose-400",
                 green: "text-emerald-400",
               };
               return (
-                <div key={step.title} className="glass-card group p-8 text-center">
-                  <div className="mb-2 text-xs font-bold tracking-widest text-slate-600">
-                    {String(i + 1).padStart(2, "0")}
+                <div key={step.title} className="glass-card group p-8">
+                  <div className="flex items-start gap-5">
+                    <div className="shrink-0">
+                      <div className={`mb-3 inline-flex rounded-2xl ${bgMap[step.color]} p-3`}>
+                        <Icon className={`h-6 w-6 ${textMap[step.color]}`} />
+                      </div>
+                      <div className="text-xs font-bold tracking-widest text-slate-600">
+                        {String(i + 1).padStart(2, "0")}
+                      </div>
+                    </div>
+                    <div className="pt-0.5">
+                      <h3 className="mb-2 text-lg font-bold text-white">{step.title}</h3>
+                      <p className="text-sm leading-relaxed text-slate-500">{step.desc}</p>
+                    </div>
                   </div>
-                  <div className={`mx-auto mb-5 inline-flex rounded-2xl ${bgMap[step.color]} p-4`}>
-                    <Icon className={`h-7 w-7 ${textMap[step.color]}`} />
-                  </div>
-                  <h3 className="mb-3 text-xl font-bold text-white">{step.title}</h3>
-                  <p className="text-sm leading-relaxed text-slate-500">{step.desc}</p>
                 </div>
               );
             })}
@@ -158,15 +161,15 @@ export default function HomePage() {
       </section>
 
       {/* ===== FEATURES ===== */}
-      <section className="px-6 py-32 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-20 text-center">
+      <section className="px-6 py-40 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-24 text-center">
             <span className="badge-neon badge-purple mb-6 inline-flex">Capabilities</span>
             <h2 className="mb-5 text-4xl font-bold text-white sm:text-5xl">Built for Real Communities</h2>
             <p className="text-lg text-slate-500">Actionable intelligence for human impact</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="glass-card flex items-start gap-8 p-10">
                 <div className="shrink-0 rounded-2xl bg-purple-500/10 p-4">
