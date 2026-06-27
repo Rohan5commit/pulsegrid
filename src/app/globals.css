@@ -1,17 +1,75 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* Background & foreground */
+  --color-background: #0a0a0f;
+  --color-foreground: #e5e7eb;
+
+  /* Card */
+  --color-card: #12121a;
+  --color-card-foreground: #e5e7eb;
+
+  /* Popover */
+  --color-popover: #12121a;
+  --color-popover-foreground: #e5e7eb;
+
+  /* Primary */
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #ffffff;
+
+  /* Secondary */
+  --color-secondary: #1a1a25;
+  --color-secondary-foreground: #e5e7eb;
+
+  /* Muted */
+  --color-muted: #1a1a25;
+  --color-muted-foreground: #9ca3af;
+
+  /* Accent */
+  --color-accent: #10b981;
+  --color-accent-foreground: #ffffff;
+
+  /* Destructive */
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+
+  /* Border & input & ring */
+  --color-border: #2a2a3a;
+  --color-input: #2a2a3a;
+  --color-ring: #3b82f6;
+
+  /* Chart colors */
+  --color-chart-1: #3b82f6;
+  --color-chart-2: #10b981;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #ef4444;
+  --color-chart-5: #8b5cf6;
+
+  /* Sidebar */
+  --color-sidebar: #0a0a0f;
+  --color-sidebar-foreground: #e5e7eb;
+  --color-sidebar-primary: #3b82f6;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #1a1a25;
+  --color-sidebar-accent-foreground: #e5e7eb;
+  --color-sidebar-border: #2a2a3a;
+  --color-sidebar-ring: #3b82f6;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Custom colors used by page components */
   --color-bg: #0a0a0f;
   --color-surface: #12121a;
   --color-surface-2: #1a1a25;
-  --color-border: #2a2a3a;
   --color-border-2: #3a3a4a;
-  --color-primary: #3b82f6;
   --color-primary-glow: #60a5fa;
-  --color-accent: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
-  --color-muted: #6b7280;
   --color-text: #e5e7eb;
   --color-text-2: #9ca3af;
 }
@@ -27,8 +85,8 @@ html {
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-background);
+  color: var(--color-foreground);
   min-height: 100vh;
 }
 
