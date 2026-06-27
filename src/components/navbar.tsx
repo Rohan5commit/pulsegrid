@@ -2,60 +2,61 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Activity, Zap, Menu, X } from "lucide-react";
+import { Activity, LayoutDashboard, MessageSquare, BarChart3, Layers, FileText } from "lucide-react";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/demo", label: "Demo" },
-  { href: "/ask", label: "Ask PulseGrid" },
-  { href: "/summary", label: "Impact" },
-  { href: "/architecture", label: "Architecture" },
+const NAV_ITEMS = [
+  { href: "/", label: "Home", icon: Activity },
+  { href: "/demo", label: "Demo", icon: LayoutDashboard },
+  { href: "/ask", label: "Ask", icon: MessageSquare },
+  { href: "/summary", label: "Impact", icon: BarChart3 },
+  { href: "/architecture", label: "Architecture", icon: Layers },
+  { href: "/response-plan", label: "Plan", icon: FileText },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-[#050816]/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600">
-            <Activity className="h-4 w-4 text-white" />
+    <nav className="fixed inset-x-0 top-0 z-50 glass-strong">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-shadow">
+            <Activity className="h-5 w-5 text-white" />
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 opacity-0 blur-md group-hover:opacity-50 transition-opacity" />
           </div>
-          <span className="gradient-text">PulseGrid</span>
+          <span className="text-lg font-bold tracking-tight">
+            <span className="gradient-text">Pulse</span>
+            <span className="text-white">Grid</span>
+          </span>
         </Link>
 
-        <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? <X className="h-5 w-5 text-slate-400" /> : <Menu className="h-5 w-5 text-slate-400" />}
-        </button>
-
-        <div
-          className={`${menuOpen ? "flex" : "hidden"} absolute left-0 top-full z-50 w-full flex-col gap-1 border-b border-white/5 bg-[#050816]/95 p-4 backdrop-blur-xl md:relative md:w-auto md:flex-row md:border-0 md:p-0 md:bg-transparent items-center md:flex`}
-        >
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                pathname === link.href
-                  ? "bg-cyan-500/10 text-cyan-400"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+        {/* Nav links */}
+        <div className="hidden md:flex items-center gap-1">
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-cyan-500/15 text-cyan-400 shadow-sm shadow-cyan-500/10"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
         </div>
 
-        <Link
-          href="/demo"
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/25 hover:scale-[1.02]"
-        >
-          <Zap className="h-4 w-4" />
-          Try Demo
-        </Link>
+        {/* Status indicator */}
+        <div className="flex items-center gap-2">
+          <div className="pulse-dot" />
+          <span className="text-xs font-medium text-cyan-400">LIVE</span>
+        </div>
       </div>
     </nav>
   );

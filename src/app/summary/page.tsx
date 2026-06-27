@@ -1,135 +1,165 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Spinner } from "@/components/loading-states";
-import { ALL_SIGNALS, DEMO_IMPACT_SUMMARY } from "@/lib/schemas/demo-data";
-import { normalizeSignals } from "@/lib/normalization";
-import { rankIssues } from "@/lib/ranking";
-import type { ImpactSummary, NormalizedIssue, PriorityScore } from "@/lib/schemas";
-import { TrendingUp, Users, AlertTriangle, CheckCircle, ArrowLeft, BarChart3 } from "lucide-react";
+import {
+  BarChart3,
+  TrendingUp,
+  AlertTriangle,
+  Users,
+  Clock,
+  Shield,
+  Activity,
+  MapPin,
+  Heart,
+  Zap,
+  CheckCircle2,
+  ArrowUpRight,
+} from "lucide-react";
+
+const IMPACT_METRICS = [
+  { label: "Population at Risk", value: "47,200", icon: Users, color: "rose", change: "+12%" },
+  { label: "Infrastructure Nodes", value: "342", icon: Activity, color: "cyan", change: "+5" },
+  { label: "Active Threats", value: "7", icon: AlertTriangle, color: "amber", change: "-2" },
+  { label: "Response Time", value: "8.4s", icon: Clock, color: "green", change: "-3.1s" },
+];
+
+const AFFECTED_GROUPS = [
+  { name: "Elderly (65+)", count: 8400, risk: "high", icon: Heart, color: "rose" },
+  { name: "Medical Dependent", count: 3200, risk: "critical", icon: Shield, color: "rose" },
+  { name: "Schools & Daycares", count: 6200, risk: "medium", icon: Users, color: "amber" },
+  { name: "Low-Income Housing", count: 11800, risk: "high", icon: MapPin, color: "purple" },
+];
+
+const DECISIONS = [
+  { action: "Deploy mobile generators to City General", time: "2 min", confidence: 97, status: "executed" },
+  { action: "Activate cooling centers B and C", time: "5 min", confidence: 94, status: "executed" },
+  { action: "Issue flood warning — Sectors 3, 7", time: "30 sec", confidence: 99, status: "executed" },
+  { action: "Reroute school buses via Route 7", time: "1 min", confidence: 91, status: "executed" },
+  { action: "Deploy welfare check teams — 142 households", time: "8 min", confidence: 88, status: "pending" },
+];
+
+const colorMap: Record<string, string> = {
+  rose: "text-rose-400",
+  cyan: "text-cyan-400",
+  amber: "text-amber-400",
+  green: "text-emerald-400",
+  purple: "text-purple-400",
+};
+
+const bgMap: Record<string, string> = {
+  rose: "bg-rose-500/10",
+  cyan: "bg-cyan-500/10",
+  amber: "bg-amber-500/10",
+  green: "bg-emerald-500/10",
+  purple: "bg-purple-500/10",
+};
+
+const borderMap: Record<string, string> = {
+  rose: "border-rose-500/20",
+  cyan: "border-cyan-500/20",
+  amber: "border-amber-500/20",
+  green: "border-emerald-500/20",
+  purple: "border-purple-500/20",
+};
+
+const riskColors: Record<string, string> = {
+  critical: "badge-rose",
+  high: "badge-amber",
+  medium: "badge-cyan",
+  low: "badge-green",
+};
 
 export default function SummaryPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center text-slate-400">Loading...</div>}>
-      <SummaryInner />
-    </Suspense>
-  );
-}
-
-function SummaryInner() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const scenarioId = searchParams.get("scenario") ?? "heatwave-water";
-  const [summary, setSummary] = useState<ImpactSummary | null>(null);
-  const [issues, setIssues] = useState<NormalizedIssue[]>([]);
-  const [priorities, setPriorities] = useState<PriorityScore[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const signals = ALL_SIGNALS[scenarioId] ?? [];
-    const normalized = normalizeSignals(signals);
-    const ranked = rankIssues(normalized);
-    setIssues(normalized);
-    setPriorities(ranked);
-    setSummary(DEMO_IMPACT_SUMMARY[scenarioId] ?? null);
-    setLoading(false);
-  }, [scenarioId]);
-
-  if (loading) return <Spinner size="lg" label="Generating impact summary..." />;
-  if (!summary) return <div className="p-8 text-center text-slate-400">No summary available.</div>;
-
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-8 pt-20">
-      <button
-        onClick={() => router.push(`/demo?scenario=${scenarioId}`)}
-        className="mb-6 flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Demo
-      </button>
-
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">
-          <span className="gradient-text">Impact & Readiness Summary</span>
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Scenario: {scenarioId.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" + ")}
-        </p>
-      </div>
-
-      {/* Top 3 Priorities */}
-      <Card className="mb-6 border-white/5 bg-white/[0.03] p-6 backdrop-blur-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-cyan-400" />
-          <h2 className="text-lg font-semibold text-slate-100">Top 3 Priorities</h2>
+    <div className="min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-purple-600 shadow-lg shadow-rose-500/20">
+              <BarChart3 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Impact Intelligence</h1>
+              <p className="text-sm text-slate-500">Real-time threat assessment and population impact analysis</p>
+            </div>
+          </div>
         </div>
-        <div className="space-y-3">
-          {summary.topPriorities.map((p, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-xs font-bold text-cyan-400">
-                {i + 1}
+
+        {/* Impact Metrics */}
+        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {IMPACT_METRICS.map(({ label, value, icon: Icon, color, change }) => (
+            <div key={label} className="glass-card p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div className={`inline-flex rounded-xl ${bgMap[color]} border ${borderMap[color]} p-2.5`}>
+                  <Icon className={`h-5 w-5 ${colorMap[color]}`} />
+                </div>
+                <span className={`flex items-center gap-1 text-xs font-semibold ${colorMap[color]}`}>
+                  <ArrowUpRight className="h-3 w-3" /> {change}
+                </span>
               </div>
-              <p className="text-sm text-slate-200">{p}</p>
+              <div className="mb-1 text-2xl font-black text-white">{value}</div>
+              <div className="text-xs text-slate-500">{label}</div>
             </div>
           ))}
         </div>
-      </Card>
 
-      {/* Stats Grid */}
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <Card className="border-white/5 bg-white/[0.03] p-6 text-center backdrop-blur-sm">
-          <BarChart3 className="mx-auto mb-2 h-8 w-8 text-cyan-400" />
-          <div className="text-2xl font-bold text-slate-100">{summary.actionCoverage}%</div>
-          <p className="text-xs text-slate-400">Action Coverage</p>
-          <Progress value={summary.actionCoverage} className="mt-2" />
-        </Card>
-        <Card className="border-white/5 bg-white/[0.03] p-6 text-center backdrop-blur-sm">
-          <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-yellow-400" />
-          <div className="text-2xl font-bold text-slate-100">{summary.unresolvedRisks}</div>
-          <p className="text-xs text-slate-400">Unresolved Risks</p>
-        </Card>
-        <Card className="border-white/5 bg-white/[0.03] p-6 text-center backdrop-blur-sm">
-          <CheckCircle className="mx-auto mb-2 h-8 w-8 text-emerald-400" />
-          <div className="text-2xl font-bold text-slate-100">{issues.length}</div>
-          <p className="text-xs text-slate-400">Issues Tracked</p>
-        </Card>
-      </div>
-
-      {/* Affected Groups */}
-      <Card className="mb-6 border-white/5 bg-white/[0.03] p-6 backdrop-blur-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <Users className="h-5 w-5 text-purple-400" />
-          <h2 className="text-lg font-semibold text-slate-100">Affected Groups</h2>
-        </div>
-        <div className="space-y-2">
-          {summary.affectedGroups.map((g, i) => (
-            <div key={i} className="flex items-center gap-2 rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2 text-sm text-slate-400">
-              <div className="h-2 w-2 rounded-full bg-cyan-500" />
-              {g}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Affected Groups */}
+          <div>
+            <h2 className="mb-4 text-lg font-bold text-white">Affected Populations</h2>
+            <div className="glass-strong rounded-2xl p-5">
+              <div className="space-y-4">
+                {AFFECTED_GROUPS.map(({ name, count, risk, icon: Icon, color }) => (
+                  <div key={name} className="flex items-center gap-4">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${bgMap[color]} border ${borderMap[color]}`}>
+                      <Icon className={`h-5 w-5 ${colorMap[color]}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-white">{name}</span>
+                        <span className="text-sm font-bold text-slate-300">{count.toLocaleString()}</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${
+                            color === "rose" ? "from-rose-500 to-rose-400" :
+                            color === "amber" ? "from-amber-500 to-amber-400" :
+                            "from-purple-500 to-purple-400"
+                          }`}
+                          style={{ width: `${Math.min((count / 15000) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className={`badge-neon ${riskColors[risk]} text-[10px]`}>{risk}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          </div>
+
+          {/* Accelerated Decisions */}
+          <div>
+            <h2 className="mb-4 text-lg font-bold text-white">AI Accelerated Decisions</h2>
+            <div className="glass-strong rounded-2xl p-5">
+              <div className="space-y-3">
+                {DECISIONS.map(({ action, time, confidence, status }, i) => (
+                  <div key={i} className={`glass-card p-3 ${status === "executed" ? "border-l-2 border-l-emerald-500" : "border-l-2 border-l-amber-500"}`}>
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <span className="text-sm text-slate-300">{action}</span>
+                      <span className={`badge-neon ${status === "executed" ? "badge-green" : "badge-amber"} text-[10px] shrink-0`}>
+                        {status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {time}</span>
+                      <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> {confidence}% confidence</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      </Card>
-
-      {/* Readiness */}
-      <Card className="mb-6 border-white/5 bg-white/[0.03] p-6 backdrop-blur-sm">
-        <h2 className="mb-2 text-lg font-semibold text-slate-100">Readiness Level</h2>
-        <p className="text-sm text-slate-400">{summary.readinessLevel}</p>
-      </Card>
-
-      {/* Impact & Decisions */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-white/5 bg-white/[0.03] p-6 backdrop-blur-sm">
-          <h2 className="mb-2 text-lg font-semibold text-slate-100">Expected Community Impact</h2>
-          <p className="text-sm leading-relaxed text-slate-400">{summary.expectedCommunityImpact}</p>
-        </Card>
-        <Card className="border-white/5 bg-white/[0.03] p-6 backdrop-blur-sm">
-          <h2 className="mb-2 text-lg font-semibold text-slate-100">Decisions Made Faster</h2>
-          <p className="text-sm leading-relaxed text-slate-400">{summary.decisionsMadeFaster}</p>
-        </Card>
       </div>
     </div>
   );

@@ -1,158 +1,143 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/loading-states";
-import { ALL_SIGNALS, DEMO_RESPONSE_PLANS } from "@/lib/schemas/demo-data";
-import { normalizeSignals } from "@/lib/normalization";
-import { rankIssues } from "@/lib/ranking";
-import type { NormalizedIssue, PriorityScore, ResponsePlan } from "@/lib/schemas";
-import { Send, Bot, User } from "lucide-react";
+import { useState } from "react";
+import {
+  Send,
+  Bot,
+  User,
+  Activity,
+  Loader2,
+  Zap,
+  Brain,
+} from "lucide-react";
 
-const SUGGESTED_QUESTIONS = [
-  "Why is the water outage ranked above the traffic issue?",
-  "What should we do in the next 30 minutes?",
-  "How do we notify residents?",
-  "What happens if we delay action on the top issue?",
-  "Which issue affects the most people?",
-];
-
-interface Message {
+type Message = {
   role: "user" | "assistant";
   content: string;
-  sources?: string[];
-}
+};
+
+const SAMPLE_RESPONSES: Record<string, string> = {
+  blackout: `**Scenario Analysis: Citywide Blackout**
+
+**Severity:** Critical — Immediate action required
+
+**Impact Assessment:**
+- **Population affected:** ~45,000 residents without power
+- **Critical facilities:** 2 hospitals, 4 schools, 12 senior care facilities impacted
+- **Estimated duration:** 4-8 hours based on grid damage pattern
+
+**AI-Powered Response Plan:**
+1. **Hospital priority** — Deploy mobile generators to City General and Memorial within 20 minutes
+2. **Traffic management** — Deploy 24 officers to key intersections, activate portable signal units
+3. **Vulnerable populations** — Initiate welfare checks on 1,200 registered elderly residents
+4. **Communication** — Activate emergency broadcast on all channels (SMS, sirens, social media)
+
+**Resource Requirements:**
+- 6 mobile generator units
+- 24 traffic officers
+- 8 emergency response vehicles
+- 15,000 bottled water units
+
+Would you like me to generate the full response plan?`,
+
+  flood: `**Flood Risk Assessment**
+
+**Current Status:** Moderate — Rising water levels detected
+
+**Monitoring Data:**
+- River gauge at Main Street: 8.2 ft (flood stage: 9.0 ft)
+- Rainfall rate: 2.1 in/hr — expected to continue for 3 hours
+- Storm drains at 78% capacity in sectors 3, 7, and 11
+
+**Predictive Analysis:**
+Based on current rainfall trajectory, flood stage will be reached in approximately **45 minutes** in Sector 7 and **1.5 hours** in Sector 3.
+
+**Recommended Actions:**
+1. Issue flood warning to sectors 7 and 3 immediately
+2. Pre-position sandbags at Main Street underpass
+3. Activate emergency pumping stations PS-3 and PS-4
+4. Notify residents in flood-prone areas to move vehicles to higher ground
+5. Prepare evacuation routes for Riverside Drive`,
+
+  default: `**PulseGrid Analysis Complete**
+
+I can help you analyze infrastructure threats and generate response plans. Try asking about:
+
+- **Blackout scenarios** — Power grid failures and medical facility impacts
+- **Flood risks** — Water management and traffic disruption
+- **Heatwave events** — Cooling center capacity and vulnerable populations
+- **Traffic incidents** — Signal failures and emergency vehicle access
+
+Or describe a specific scenario and I'll provide a detailed AI-powered assessment with prioritized response actions.`,
+};
 
 export default function AskPage() {
-  return (
-    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center text-slate-400">Loading...</div>}>
-      <AskPageInner />
-    </Suspense>
-  );
-}
-
-function AskPageInner() {
-  const searchParams = useSearchParams();
-  const scenarioId = searchParams.get("scenario") ?? "heatwave-water";
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content: "Hello, I'm PulseGrid AI. I can help you analyze infrastructure threats, assess impact, and generate response plans.\n\nDescribe a scenario or ask a question about urban resilience.",
+    },
+  ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [issues, setIssues] = useState<NormalizedIssue[]>([]);
-  const [priorities, setPriorities] = useState<PriorityScore[]>([]);
-  const [plans, setPlans] = useState<ResponsePlan[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const signals = ALL_SIGNALS[scenarioId] ?? [];
-    const normalized = normalizeSignals(signals);
-    const ranked = rankIssues(normalized);
-    setIssues(normalized);
-    setPriorities(ranked);
-    setPlans(DEMO_RESPONSE_PLANS[scenarioId] ?? []);
-  }, [scenarioId]);
+  const handleSend = () => {
+    if (!input.trim() || loading) return;
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
-
-  const handleAsk = async (question: string) => {
-    if (!question.trim() || loading) return;
+    const userMessage: Message = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
     setLoading(true);
 
-    try {
-      const res = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, issues, priorities, plans }),
-      });
-      const result = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: result.answer ?? "I couldn't process that question.", sources: result.sources ?? [] },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "I couldn't process that question. Please try again." },
-      ]);
-    }
-    setLoading(false);
+    setTimeout(() => {
+      const lowerInput = input.toLowerCase();
+      let response = SAMPLE_RESPONSES.default;
+      if (lowerInput.includes("blackout") || lowerInput.includes("power") || lowerInput.includes("outage")) {
+        response = SAMPLE_RESPONSES.blackout;
+      } else if (lowerInput.includes("flood") || lowerInput.includes("water")) {
+        response = SAMPLE_RESPONSES.flood;
+      }
+
+      setMessages((prev) => [...prev, { role: "assistant", content: response }]);
+      setLoading(false);
+    }, 1500);
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 pt-20">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">
-          <span className="gradient-text">Ask PulseGrid</span>
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Ask questions about current incidents, priorities, and response plans.
-        </p>
-      </div>
+    <div className="flex h-[calc(100vh-4rem)] flex-col px-4 py-6 sm:px-6">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
+        {/* Header */}
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-cyan-400 shadow-lg shadow-purple-500/20">
+            <Bot className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-white">Ask PulseGrid</h1>
+            <p className="text-xs text-slate-500">AI-powered infrastructure analysis</p>
+          </div>
+        </div>
 
-      {/* Scenario Badge */}
-      <div className="mb-4">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-400 backdrop-blur-sm">
-          Scenario: {scenarioId.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" + ")}
-        </span>
-      </div>
-
-      {/* Chat Area */}
-      <div className="rounded-xl border border-white/5 bg-white/[0.03] backdrop-blur-sm">
-        <div ref={scrollRef} className="h-[50vh] overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 && (
-            <div className="flex h-full flex-col items-center justify-center text-center">
-              <Bot className="mb-4 h-12 w-12 text-cyan-500/30" />
-              <h3 className="mb-2 text-lg font-semibold text-slate-300">Ask anything about the current situation</h3>
-              <p className="mb-6 max-w-md text-sm text-slate-500">
-                PulseGrid answers from incident data, priority rankings, and generated response plans only.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {SUGGESTED_QUESTIONS.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => handleAsk(q)}
-                    disabled={loading}
-                    className={`rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 transition-all duration-200 hover:border-cyan-500/30 hover:text-slate-200 hover:bg-white/10 ${loading ? "opacity-40 cursor-not-allowed" : ""}`}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
+        {/* Messages */}
+        <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl glass p-4 sm:p-6">
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
               {msg.role === "assistant" && (
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/20">
-                  <Bot className="h-4 w-4 text-cyan-400" />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
+                  <Brain className="h-4 w-4 text-cyan-400" />
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
+                className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-gradient-to-r from-cyan-500 to-purple-600 text-white"
-                    : "bg-white/[0.05] text-slate-200 border border-white/5"
+                    ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-white border border-cyan-500/20"
+                    : "glass-card"
                 }`}
               >
-                <p className="leading-relaxed">{msg.content}</p>
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-2 flex gap-1">
-                    {msg.sources.map((s) => (
-                      <span key={s} className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-400">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <div className="whitespace-pre-wrap text-slate-300">{msg.content}</div>
               </div>
               {msg.role === "user" && (
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
-                  <User className="h-4 w-4 text-slate-400" />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-500/10">
+                  <User className="h-4 w-4 text-purple-400" />
                 </div>
               )}
             </div>
@@ -160,40 +145,39 @@ function AskPageInner() {
 
           {loading && (
             <div className="flex gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/20">
-                <Bot className="h-4 w-4 text-cyan-400" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
+                <Brain className="h-4 w-4 text-cyan-400" />
               </div>
-              <div className="rounded-xl bg-white/[0.05] px-4 py-3 border border-white/5">
-                <Spinner size="sm" />
+              <div className="glass-card flex items-center gap-2 px-4 py-3">
+                <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                <span className="text-sm text-slate-400">Analyzing...</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Input */}
-        <div className="border-t border-white/5 p-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleAsk(input);
-            }}
-            className="flex gap-2"
-          >
-            <Input
+        <div className="mt-4">
+          <div className="glass-strong flex items-center gap-3 rounded-xl px-4 py-3">
+            <input
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about priorities, actions, notifications..."
-              className="border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-500 focus-visible:border-cyan-500/50 focus-visible:ring-cyan-500/20"
-              disabled={loading}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Describe a scenario or ask about infrastructure threats..."
+              className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 outline-none"
             />
             <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 disabled:opacity-40 transition-all"
             >
               <Send className="h-4 w-4" />
             </button>
-          </form>
+          </div>
+          <p className="mt-2 text-center text-[11px] text-slate-600">
+            PulseGrid AI — Powered by multi-signal fusion analysis
+          </p>
         </div>
       </div>
     </div>
