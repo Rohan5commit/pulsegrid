@@ -5,9 +5,7 @@ import {
   Send,
   Bot,
   User,
-  Activity,
   Loader2,
-  Zap,
   Brain,
 } from "lucide-react";
 
