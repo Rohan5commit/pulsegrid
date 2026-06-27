@@ -18,7 +18,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)] shadow-lg shadow-black/10">
+    <nav className="fixed inset-x-0 top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)] shadow-lg shadow-black/10">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold">
           <Activity className="h-6 w-6 text-[var(--color-primary)]" />

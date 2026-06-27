@@ -30,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.className} antialiased`}>
         <TooltipProvider>
           <Navbar />
+          <div className="h-14" />
           <main className="min-h-screen">{children}</main>
         </TooltipProvider>
       </body>
