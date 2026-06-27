@@ -1,7 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { MapPin, Users, Clock, AlertTriangle } from "lucide-react";
 import type { NormalizedIssue, PriorityScore } from "@/lib/schemas";
 
@@ -32,26 +30,26 @@ export function IssueCard({ issue, priority, onClick }: IssueCardProps) {
     priority.score >= 80 ? "text-red-400" : priority.score >= 60 ? "text-orange-400" : priority.score >= 40 ? "text-yellow-400" : "text-blue-400";
 
   return (
-    <Card
-      className={`cursor-pointer border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-surface-2)] hover:shadow-lg hover:shadow-[var(--color-primary)]/5 ${onClick ? "hover:scale-[1.01]" : ""}`}
+    <div
+      className={`cursor-pointer rounded-xl border border-white/5 bg-white/[0.03] p-5 backdrop-blur-sm transition-all duration-300 hover:border-cyan-500/30 hover:bg-white/[0.06] hover:shadow-lg hover:shadow-cyan-500/5 ${onClick ? "hover:scale-[1.01]" : ""}`}
       onClick={onClick}
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="mb-1 flex items-center gap-2">
             <span className={`text-2xl font-bold ${scoreColor}`}>{priority.score}</span>
-            <span className="text-xs text-[var(--color-muted)]">/ 100</span>
-            <Badge className={`ml-1 border ${SEVERITY_COLORS[issue.severity]}`}>{issue.severity}</Badge>
-            <Badge className={`border ${URGENCY_COLORS[issue.urgency]}`}>{issue.urgency}</Badge>
+            <span className="text-xs text-slate-500">/ 100</span>
+            <span className={`ml-1 inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium ${SEVERITY_COLORS[issue.severity]}`}>{issue.severity}</span>
+            <span className={`inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium ${URGENCY_COLORS[issue.urgency]}`}>{issue.urgency}</span>
           </div>
-          <h3 className="text-lg font-semibold leading-tight">{issue.title}</h3>
+          <h3 className="text-lg font-semibold leading-tight text-slate-100">{issue.title}</h3>
         </div>
         {priority.score >= 80 && (
           <AlertTriangle className="h-5 w-5 flex-shrink-0 text-red-400 animate-pulse-glow" />
         )}
       </div>
-      <p className="mb-3 line-clamp-2 text-sm text-[var(--color-text-2)]">{issue.description}</p>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-muted)]">
+      <p className="mb-3 line-clamp-2 text-sm text-slate-400">{issue.description}</p>
+      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span className="flex items-center gap-1">
           <MapPin className="h-3 w-3" /> {issue.location}
         </span>
@@ -62,6 +60,6 @@ export function IssueCard({ issue, priority, onClick }: IssueCardProps) {
           <Clock className="h-3 w-3" /> {new Date(issue.reportedAt).toLocaleTimeString()}
         </span>
       </div>
-    </Card>
+    </div>
   );
 }
