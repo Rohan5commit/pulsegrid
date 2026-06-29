@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import {
   ArrowLeft,
   Zap,
@@ -34,7 +33,6 @@ import {
 } from "@/lib/schemas/demo-data";
 import type {
   NormalizedIssue,
-  PriorityScore,
   EnrichedContext,
   ResponsePlan,
   AlertDraft,
@@ -63,23 +61,20 @@ const SCENARIO_ICONS: Record<string, typeof Flame> = {
   "blackout-medical": Zap,
 };
 
-const SCENARIO_COLORS: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+const SCENARIO_COLORS: Record<string, { bg: string; text: string;  badge: string }> = {
   "heatwave-water": {
     bg: "bg-red-500/10",
     text: "text-red-400",
-    border: "border-red-500/20",
     badge: "bg-red-500/15 text-red-400 border-red-500/20",
   },
   "flood-traffic": {
     bg: "bg-cyan-500/10",
     text: "text-cyan-400",
-    border: "border-cyan-500/20",
     badge: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
   },
   "blackout-medical": {
     bg: "bg-purple-500/10",
     text: "text-purple-400",
-    border: "border-purple-500/20",
     badge: "bg-purple-500/15 text-purple-400 border-purple-500/20",
   },
 };
