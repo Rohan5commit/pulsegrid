@@ -209,17 +209,23 @@ export default function DemoPage() {
       }
     } catch {
       if (scenarioId) {
-        const fbCtx = DEMO_ENRICHED_CONTEXTS[scenarioId]?.find(
-          (e) => e.issueId === issue.id
-        );
-        if (fbCtx) {
-          setEnrichment(fbCtx as EnrichedContext);
-          setAiSource("fallback");
+        // Only set fallback enrichment if it wasn't already populated
+        if (!enrichment) {
+          const fbCtx = DEMO_ENRICHED_CONTEXTS[scenarioId]?.find(
+            (e) => e.issueId === issue.id
+          );
+          if (fbCtx) {
+            setEnrichment(fbCtx as EnrichedContext);
+            setAiSource("fallback");
+          }
         }
-        const fbPlan = DEMO_RESPONSE_PLANS[scenarioId]?.find(
-          (p) => p.issueId === issue.id
-        );
-        if (fbPlan) setPlan(fbPlan);
+        // Only set fallback plan if it wasn't already populated
+        if (!plan) {
+          const fbPlan = DEMO_RESPONSE_PLANS[scenarioId]?.find(
+            (p) => p.issueId === issue.id
+          );
+          if (fbPlan) setPlan(fbPlan);
+        }
       }
     } finally {
       setLoading(null);
