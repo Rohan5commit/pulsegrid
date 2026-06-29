@@ -167,6 +167,9 @@ export default function DemoPage() {
     setState("detail");
     setLoading("enrich");
 
+    let enrichDone = false;
+    let planDone = false;
+
     try {
       const res = await fetch("/api/enrich", {
         method: "POST",
@@ -185,6 +188,7 @@ export default function DemoPage() {
             null
           : null);
       setEnrichment(ctx);
+      enrichDone = true;
 
       setLoading("plan");
       if (ctx) {
@@ -196,6 +200,7 @@ export default function DemoPage() {
         const planData = await planRes.json();
         setPlan(planData.plan);
         setAlerts(planData.alerts);
+        planDone = true;
 
         if (!planData.plan && scenarioId) {
           const fallbackPlan = DEMO_RESPONSE_PLANS[scenarioId]?.find(
@@ -209,8 +214,7 @@ export default function DemoPage() {
       }
     } catch {
       if (scenarioId) {
-        // Only set fallback enrichment if it wasn't already populated
-        if (!enrichment) {
+        if (!enrichDone) {
           const fbCtx = DEMO_ENRICHED_CONTEXTS[scenarioId]?.find(
             (e) => e.issueId === issue.id
           );
@@ -219,8 +223,7 @@ export default function DemoPage() {
             setAiSource("fallback");
           }
         }
-        // Only set fallback plan if it wasn't already populated
-        if (!plan) {
+        if (!planDone) {
           const fbPlan = DEMO_RESPONSE_PLANS[scenarioId]?.find(
             (p) => p.issueId === issue.id
           );
