@@ -1,279 +1,862 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import {
-  Activity,
-  AlertTriangle,
-  Shield,
-  Clock,
-  Zap,
-  ChevronRight,
   ArrowLeft,
-  FileText,
-  Users,
-  MapPin,
-  TrendingUp,
-  Brain,
-  Loader2,
-  Radio,
-  Droplets,
+  Zap,
   Flame,
-  Heart,
+  Droplets,
+  Loader2,
+  MapPin,
+  Clock,
+  TrendingUp,
+  Shield,
+  ShieldCheck,
+  Brain,
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  Send,
+  Users,
+  Target,
+  FileText,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { normalizeSignals } from "@/lib/normalization";
+import { rankIssues } from "@/lib/ranking";
+import {
+  SCENARIO_PRESETS,
+  ALL_SIGNALS,
+  DEMO_ENRICHED_CONTEXTS,
+  DEMO_RESPONSE_PLANS,
+} from "@/lib/schemas/demo-data";
+import type {
+  NormalizedIssue,
+  PriorityScore,
+  EnrichedContext,
+  ResponsePlan,
+  AlertDraft,
+} from "@/lib/schemas";
 
-/* ===== MOCK DATA ===== */
+/* ──────────── Types ──────────── */
 
-type Scenario = {
-  id: string;
-  title: string;
-  description: string;
-  icon: any;
-  color: string;
-  badge: string;
-  issues: Issue[];
+type PipelineState = "select" | "running" | "issues" | "detail";
+type PipelineStep = "ingest" | "normalize" | "rank" | "ready";
+
+interface RankedIssue extends NormalizedIssue {
+  rank: number;
+  score: number;
+}
+
+interface ChatMsg {
+  role: "user" | "ai";
+  content: string;
+}
+
+/* ──────────── Config ──────────── */
+
+const SCENARIO_ICONS: Record<string, typeof Flame> = {
+  "heatwave-water": Flame,
+  "flood-traffic": Droplets,
+  "blackout-medical": Zap,
 };
 
-type Issue = {
-  id: string;
-  title: string;
-  severity: "critical" | "high" | "medium" | "low";
-  urgency: "immediate" | "short-term" | "planned";
-  category: string;
-  priority: number;
-  affected: string;
-  desc: string;
-  aiAnalysis: string;
+const SCENARIO_COLORS: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  "heatwave-water": {
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    border: "border-red-500/20",
+    badge: "bg-red-500/15 text-red-400 border-red-500/20",
+  },
+  "flood-traffic": {
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-400",
+    border: "border-cyan-500/20",
+    badge: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
+  },
+  "blackout-medical": {
+    bg: "bg-purple-500/10",
+    text: "text-purple-400",
+    border: "border-purple-500/20",
+    badge: "bg-purple-500/15 text-purple-400 border-purple-500/20",
+  },
 };
 
-const SCENARIOS: Scenario[] = [
-  {
-    id: "heatwave",
-    title: "Heatwave + Water Outage",
-    description: "Extreme heat event combined with water main break affecting 12,000 residents",
-    icon: Flame,
-    color: "rose",
-    badge: "CRITICAL",
-    issues: [
-      { id: "1", title: "Water Main Break — Sector 7", severity: "critical", urgency: "immediate", category: "Water", priority: 98, affected: "3,200 residents", desc: "6-inch water main rupture at intersection of Oak and 5th, flooding adjacent streets.", aiAnalysis: "AI recommends immediate shutoff at valves V-7A and V-7B. Estimated repair: 8 hours. Emergency water distribution should be deployed to Oak Park Elementary within 30 minutes." },
-      { id: "2", title: "Power Grid Overload — Blocks 12-15", severity: "critical", urgency: "immediate", category: "Power", priority: 95, affected: "4,100 residents", desc: "AC demand surge causing transformer overload. Rolling blackouts imminent.", aiAnalysis: "Transformer T-12 is operating at 147% capacity. Preemptive load shedding recommended for non-essential circuits. Hospital district must remain on dedicated grid." },
-      { id: "3", title: "Cooling Center Capacity Warning", severity: "high", urgency: "short-term", category: "Medical", priority: 87, affected: "1,800 seniors", desc: "Three primary cooling centers at 85%+ capacity. Elderly residents in unconditioned buildings at risk.", aiAnalysis: "Recommend activating secondary cooling center at Community Center B. Deploy mobile cooling units to high-rise senior housing on Elm Street. ETA for additional capacity: 45 minutes." },
-      { id: "4", title: "Traffic Signal Failure — Highway 9", severity: "high", urgency: "short-term", category: "Traffic", priority: 78, affected: "6,500 commuters", desc: "Signal controllers offline at 4 intersections along Highway 9 corridor.", aiAnalysis: "Root cause: upstream power fluctuation. Manual traffic control recommended at intersections H9-1 through H9-4. Deploy signal repair team ETA 25 minutes." },
-    ],
-  },
-  {
-    id: "flood",
-    title: "Flash Flood + Traffic Gridlock",
-    description: "Sudden flooding blocking major arteries and trapping commuters",
-    icon: Droplets,
-    color: "cyan",
-    badge: "HIGH",
-    issues: [
-      { id: "1", title: "Main Street Underpass Submerged", severity: "critical", urgency: "immediate", category: "Traffic", priority: 96, affected: "8,000 commuters", desc: "3 feet of standing water in Main Street underpass. Multiple vehicles stranded.", aiAnalysis: "Close underpass immediately. Redirect traffic via Route 7 bypass. Deploy water extraction pump team. Estimated clearance: 4 hours. Check stranded vehicles for occupants." },
-      { id: "2", title: "Storm Drain Overflow — Riverside", severity: "critical", urgency: "immediate", category: "Water", priority: 93, affected: "2,400 residents", desc: "Storm drains at capacity, backing up into residential basements.", aiAnalysis: "Activate emergency pumping stations PS-3 and PS-4. Issue basement evacuation advisory for Riverside Drive properties. Coordinate with fire department for welfare checks." },
-      { id: "3", title: "School Bus Routes Disrupted", severity: "high", urgency: "short-term", category: "Traffic", priority: 82, affected: "1,200 students", desc: "14 school bus routes affected by flooded roads. Afternoon pickup delayed.", aiAnalysis: "Reroute buses via elevated roads. Contact parents via emergency notification system. Estimated delay: 45-60 minutes. Priority: ensure special-needs transport is rerouted first." },
-    ],
-  },
-  {
-    id: "blackout",
-    title: "Citywide Blackout + Medical Emergency",
-    description: "Widespread power failure impacting critical medical facilities",
-    icon: Zap,
-    color: "purple",
-    badge: "SEVERE",
-    issues: [
-      { id: "1", title: "Hospital Backup Generator Failure", severity: "critical", urgency: "immediate", category: "Medical", priority: 99, affected: "200 patients", desc: "Primary and backup generators offline at City General Hospital. ICU on battery backup.", aiAnalysis: "CRITICAL: Deploy mobile generator units immediately. Estimated battery life: 90 minutes. Evacuate ICU patients to Regional Medical Center via ambulance convoy. Activate mutual aid agreement with neighboring district." },
-      { id: "2", title: "Elevator Entrapment — 3 High-rises", severity: "critical", urgency: "immediate", category: "Medical", priority: 94, affected: "23 residents", desc: "Elevator failures in three residential high-rises. Multiple residents trapped.", aiAnalysis: "Dispatch fire department rescue teams to Tower A (8 trapped), Tower C (11 trapped), and Tower E (4 trapped). Prioritize Tower C — includes mobility-impaired residents on floors 12 and 15." },
-      { id: "3", title: "Traffic Signal Cascade Failure", severity: "high", urgency: "short-term", category: "Traffic", priority: 85, affected: "15,000 commuters", desc: "All traffic signals on Main Corridor offline, causing gridlock.", aiAnalysis: "Deploy 12 traffic officers to key intersections. Activate portable generators for critical intersection signals. Coordinate with transit authority to increase bus frequency on parallel routes." },
-    ],
-  },
+const SEVERITY_STYLE: Record<string, string> = {
+  critical: "bg-red-500/15 text-red-400 border-red-500/20",
+  high: "bg-orange-500/15 text-orange-400 border-orange-500/20",
+  medium: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20",
+  low: "bg-green-500/15 text-green-400 border-green-500/20",
+};
+
+const PIPELINE_STEPS: { key: PipelineStep; label: string }[] = [
+  { key: "ingest", label: "Ingesting signals" },
+  { key: "normalize", label: "Normalizing data" },
+  { key: "rank", label: "Scoring priority" },
+  { key: "ready", label: "Ranking complete" },
 ];
 
-const SEVERITY_COLORS = {
-  critical: "badge-rose",
-  high: "badge-amber",
-  medium: "badge-cyan",
-  low: "badge-green",
-};
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
-/* ===== PAGE ===== */
+/* ──────────── Page ──────────── */
 
 export default function DemoPage() {
-  const [selected, setSelected] = useState<Scenario | null>(null);
-  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [state, setState] = useState<PipelineState>("select");
+  const [scenarioId, setScenarioId] = useState<string | null>(null);
+  const [pipelineStep, setPipelineStep] = useState<PipelineStep>("ingest");
+  const [issues, setIssues] = useState<RankedIssue[]>([]);
+  const [selected, setSelected] = useState<RankedIssue | null>(null);
+  const [enrichment, setEnrichment] = useState<EnrichedContext | null>(null);
+  const [plan, setPlan] = useState<ResponsePlan | null>(null);
+  const [alerts, setAlerts] = useState<AlertDraft[]>([]);
+  const [loading, setLoading] = useState<"enrich" | "plan" | null>(null);
+  const [aiSource, setAiSource] = useState<"ai" | "fallback">("ai");
+  const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [expandedPlan, setExpandedPlan] = useState(true);
+  const [expandedAlerts, setExpandedAlerts] = useState(true);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const handleScenarioClick = (scenario: Scenario) => {
-    setSelected(scenario);
-    setActiveIssue(null);
-    setAnalyzing(true);
-    setTimeout(() => setAnalyzing(false), 1200);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
+
+  /* ── Run Pipeline ── */
+
+  const runPipeline = async (id: string) => {
+    setScenarioId(id);
+    setState("running");
+    setPipelineStep("ingest");
+
+    const signals = ALL_SIGNALS[id] || [];
+    await delay(500);
+    setPipelineStep("normalize");
+
+    const normalized = normalizeSignals(signals);
+    await delay(600);
+    setPipelineStep("rank");
+
+    const scores = rankIssues(normalized);
+    await delay(500);
+    setPipelineStep("ready");
+    await delay(300);
+
+    const ranked: RankedIssue[] = scores
+      .sort((a, b) => b.score - a.score)
+      .map((s, i) => {
+        const issue = normalized.find((n) => n.id === s.issueId)!;
+        return { ...issue, rank: i + 1, score: s.score };
+      });
+
+    setIssues(ranked);
+    setState("issues");
   };
 
-  const handleIssueClick = (issue: Issue) => {
-    setAnalyzing(true);
-    setTimeout(() => {
-      setActiveIssue(issue);
-      setAnalyzing(false);
-    }, 800);
+  /* ── Select Issue ── */
+
+  const selectIssue = async (issue: RankedIssue) => {
+    setSelected(issue);
+    setEnrichment(null);
+    setPlan(null);
+    setAlerts([]);
+    setState("detail");
+    setLoading("enrich");
+
+    try {
+      const res = await fetch("/api/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issue }),
+      });
+      const data = await res.json();
+      setAiSource(data.source);
+
+      const ctx: EnrichedContext | null =
+        data.context ??
+        (scenarioId
+          ? (DEMO_ENRICHED_CONTEXTS[scenarioId]?.find(
+              (e) => e.issueId === issue.id
+            ) as EnrichedContext | null) ??
+            null
+          : null);
+      setEnrichment(ctx);
+
+      setLoading("plan");
+      if (ctx) {
+        const planRes = await fetch("/api/plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ issue, context: ctx }),
+        });
+        const planData = await planRes.json();
+        setPlan(planData.plan);
+        setAlerts(planData.alerts);
+
+        if (!planData.plan && scenarioId) {
+          const fallbackPlan = DEMO_RESPONSE_PLANS[scenarioId]?.find(
+            (p) => p.issueId === issue.id
+          );
+          if (fallbackPlan) {
+            setPlan(fallbackPlan);
+            setAiSource("fallback");
+          }
+        }
+      }
+    } catch {
+      if (scenarioId) {
+        const fbCtx = DEMO_ENRICHED_CONTEXTS[scenarioId]?.find(
+          (e) => e.issueId === issue.id
+        );
+        if (fbCtx) {
+          setEnrichment(fbCtx as EnrichedContext);
+          setAiSource("fallback");
+        }
+        const fbPlan = DEMO_RESPONSE_PLANS[scenarioId]?.find(
+          (p) => p.issueId === issue.id
+        );
+        if (fbPlan) setPlan(fbPlan);
+      }
+    } finally {
+      setLoading(null);
+    }
   };
+
+  /* ── Chat ── */
+
+  const sendChat = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const msg = chatInput.trim();
+    setChatInput("");
+    setChat((prev) => [...prev, { role: "user", content: msg }]);
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: msg,
+          issues,
+          priorities: issues.map((i) => ({
+            issueId: i.id,
+            score: i.score,
+            rank: i.rank,
+          })),
+          plans: plan ? [plan] : [],
+        }),
+      });
+      const data = await res.json();
+      setChat((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          content: data.answer || "I could not process that question.",
+        },
+      ]);
+    } catch {
+      setChat((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          content: "Connection error. Please try again.",
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  /* ── Reset ── */
+
+  const goBack = () => {
+    if (state === "detail") {
+      setSelected(null);
+      setEnrichment(null);
+      setPlan(null);
+      setAlerts([]);
+      setChat([]);
+      setState("issues");
+    } else {
+      setState("select");
+      setScenarioId(null);
+      setIssues([]);
+    }
+  };
+
+  const scenarioMeta = scenarioId
+    ? SCENARIO_PRESETS.find((s) => s.id === scenarioId)
+    : null;
+  const colors = scenarioId ? SCENARIO_COLORS[scenarioId] : null;
+
+  /* ──────────── Render ──────────── */
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-purple-600 shadow-lg shadow-cyan-500/20">
-              <Activity className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">PulseGrid Demo</h1>
-              <p className="text-sm text-slate-500">Select a crisis scenario to see AI-powered response</p>
-            </div>
-          </div>
-        </div>
+    <div className="mx-auto max-w-6xl px-6 py-8">
+      {/* Back nav */}
+      {state !== "select" && (
+        <button
+          onClick={goBack}
+          className="mb-6 flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-300"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {state === "detail"
+            ? "Back to issues"
+            : state === "running"
+              ? "Cancel"
+              : "Back to scenarios"}
+        </button>
+      )}
 
-        {/* Scenario Selection */}
-        {!selected && (
-          <div className="grid gap-5 md:grid-cols-3">
-            {SCENARIOS.map((scenario) => {
-              const Icon = scenario.icon;
+      {/* ═══════ SCENARIO PICKER ═══════ */}
+      {state === "select" && (
+        <div className="animate-fade-in-up">
+          <div className="mb-10">
+            <h1 className="text-2xl font-bold text-zinc-50">PulseGrid Demo</h1>
+            <p className="mt-1 text-sm text-zinc-500">
+              Choose a crisis scenario to run the AI response pipeline.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {SCENARIO_PRESETS.map((s) => {
+              const Icon = SCENARIO_ICONS[s.id] ?? Zap;
+              const c = SCENARIO_COLORS[s.id];
               return (
                 <button
-                  key={scenario.id}
-                  onClick={() => handleScenarioClick(scenario)}
-                  className="glass-card group cursor-pointer p-6 text-left"
+                  key={s.id}
+                  onClick={() => runPipeline(s.id)}
+                  className="group rounded-2xl border border-zinc-800/60 bg-zinc-900/50 p-6 text-left transition-all hover:border-zinc-700 hover:bg-zinc-900"
                 >
                   <div className="mb-4 flex items-start justify-between">
-                    <div className={`inline-flex rounded-xl ${
-                      scenario.color === "rose" ? "bg-rose-500/10" : scenario.color === "cyan" ? "bg-cyan-500/10" : "bg-purple-500/10"
-                    } p-3`}>
-                      <Icon className={`h-6 w-6 ${
-                        scenario.color === "rose" ? "text-rose-400" : scenario.color === "cyan" ? "text-cyan-400" : "text-purple-400"
-                      }`} />
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.bg}`}
+                    >
+                      <Icon className={`h-5 w-5 ${c.text}`} />
                     </div>
-                    <span className={`badge-neon ${
-                      scenario.color === "rose" ? "badge-rose" : scenario.color === "cyan" ? "badge-cyan" : "badge-purple"
-                    } text-[10px]`}>
-                      {scenario.badge}
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${c.badge}`}
+                    >
+                      {(ALL_SIGNALS[s.id] ?? []).length} signals
                     </span>
                   </div>
-                  <h3 className="mb-2 text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">{scenario.title}</h3>
-                  <p className="mb-4 text-sm text-slate-400">{scenario.description}</p>
-                  <div className="flex items-center gap-2 text-sm font-medium text-cyan-400">
-                    Launch Scenario <ChevronRight className="h-4 w-4" />
+                  <h3 className="mb-1.5 text-sm font-semibold text-zinc-100 group-hover:text-white">
+                    {s.name}
+                  </h3>
+                  <p className="text-xs leading-relaxed text-zinc-500">
+                    {s.description}
+                  </p>
+                  <div className="mt-4 text-xs font-medium text-sky-400 opacity-0 transition-opacity group-hover:opacity-100">
+                    Run pipeline →
                   </div>
                 </button>
               );
             })}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Active Scenario */}
-        {selected && (
-          <div className="flex gap-5">
-            {/* Issues List */}
-            <div className={`w-full ${activeIssue ? "hidden lg:block lg:w-[380px]" : ""}`}>
-              <button
-                onClick={() => { setSelected(null); setActiveIssue(null); }}
-                className="mb-4 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back to scenarios
-              </button>
+      {/* ═══════ PIPELINE RUNNING ═══════ */}
+      {state === "running" && scenarioMeta && (
+        <div className="animate-fade-in-up mx-auto max-w-lg py-20">
+          <div className="mb-8 text-center">
+            <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-sky-400" />
+            <h2 className="text-lg font-semibold text-zinc-100">
+              Running Pipeline
+            </h2>
+            <p className="text-sm text-zinc-500">{scenarioMeta.name}</p>
+          </div>
 
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">{selected.title}</h2>
-                <span className={`badge-neon ${
-                  selected.color === "rose" ? "badge-rose" : selected.color === "cyan" ? "badge-cyan" : "badge-purple"
-                }`}>
-                  {selected.issues.length} issues
-                </span>
-              </div>
+          <div className="space-y-1">
+            {PIPELINE_STEPS.map((step, i) => {
+              const stepIdx = PIPELINE_STEPS.findIndex(
+                (s) => s.key === pipelineStep
+              );
+              const status: "done" | "active" | "pending" =
+                i < stepIdx
+                  ? "done"
+                  : i === stepIdx
+                    ? "active"
+                    : "pending";
 
-              {analyzing ? (
-                <div className="glass-card flex items-center justify-center gap-3 p-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
-                  <span className="text-sm text-slate-400">Analyzing threats...</span>
+              return (
+                <div
+                  key={step.key}
+                  className="flex items-center gap-3 rounded-lg px-4 py-2.5"
+                  style={{ opacity: status === "pending" ? 0.3 : 1 }}
+                >
+                  {status === "done" ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  ) : status === "active" ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-zinc-600" />
+                  )}
+                  <span
+                    className={`text-sm ${
+                      status === "active"
+                        ? "font-medium text-zinc-200"
+                        : status === "done"
+                          ? "text-zinc-400"
+                          : "text-zinc-600"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                  {status === "done" && (
+                    <span className="ml-auto text-[11px] text-zinc-600">
+                      ✓
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {selected.issues.map((issue) => (
-                    <button
-                      key={issue.id}
-                      onClick={() => handleIssueClick(issue)}
-                      className={`glass-card w-full p-4 text-left transition-all ${
-                        activeIssue?.id === issue.id ? "border-cyan-500/30 bg-cyan-500/5" : ""
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════ ISSUE LIST ═══════ */}
+      {state === "issues" && (
+        <div className="animate-fade-in-up">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-zinc-100">
+                {scenarioMeta?.name}
+              </h2>
+              <p className="text-xs text-zinc-500">
+                {issues.length} issues ranked by composite priority score
+              </p>
+            </div>
+            <span
+              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                colors?.badge ?? ""
+              }`}
+            >
+              {issues.length} issues
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {issues.map((issue, i) => (
+              <button
+                key={issue.id}
+                onClick={() => selectIssue(issue)}
+                className="animate-fade-in-up w-full rounded-xl border border-zinc-800/60 bg-zinc-900/50 p-4 text-left transition-all hover:border-zinc-700 hover:bg-zinc-900"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-800 text-[11px] font-bold text-zinc-400">
+                      #{issue.rank}
+                    </span>
+                    <h4 className="text-sm font-semibold text-zinc-100">
+                      {issue.title}
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                        SEVERITY_STYLE[issue.severity] ?? ""
                       }`}
                     >
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <h4 className="text-sm font-bold text-white">{issue.title}</h4>
-                        <span className={`badge-neon ${SEVERITY_COLORS[issue.severity]} shrink-0 text-[10px]`}>
-                          {issue.severity}
-                        </span>
-                      </div>
-                      <p className="mb-2 text-xs text-slate-500">{issue.desc}</p>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-600">
-                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{issue.affected}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{issue.urgency}</span>
-                        <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{issue.priority}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Issue Detail Sidebar */}
-            {activeIssue && (
-              <div className="flex-1">
-                <button
-                  onClick={() => setActiveIssue(null)}
-                  className="mb-4 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors lg:hidden"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Back to issues
-                </button>
-
-                <div className="glass-strong rounded-2xl p-6">
-                  <div className="mb-4 flex items-start justify-between">
-                    <h3 className="text-xl font-bold text-white">{activeIssue.title}</h3>
-                    <span className={`badge-neon ${SEVERITY_COLORS[activeIssue.severity]}`}>
-                      {activeIssue.severity}
+                      {issue.severity}
                     </span>
                   </div>
+                </div>
+                <p className="mb-2.5 ml-[34px] text-xs text-zinc-500 line-clamp-2">
+                  {issue.description}
+                </p>
+                <div className="ml-[34px] flex items-center gap-4 text-[11px] text-zinc-600">
+                  <span className="flex items-center gap-1">
+                    <Target className="h-3 w-3" />
+                    Score {issue.score}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {issue.populationAffected.toLocaleString()} affected
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {issue.urgency}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-                  <p className="mb-6 text-sm text-slate-400">{activeIssue.desc}</p>
+      {/* ═══════ ISSUE DETAIL ═══════ */}
+      {state === "detail" && selected && (
+        <div className="animate-fade-in-up">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 text-[11px] font-bold text-zinc-400">
+                    #{selected.rank}
+                  </span>
+                  <h2 className="text-lg font-bold text-zinc-50">
+                    {selected.title}
+                  </h2>
+                </div>
+                <p className="text-sm text-zinc-500">{selected.description}</p>
+              </div>
+              <span
+                className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                  SEVERITY_STYLE[selected.severity] ?? ""
+                }`}
+              >
+                {selected.severity}
+              </span>
+            </div>
+          </div>
 
-                  {/* Details Grid */}
-                  <div className="mb-6 grid grid-cols-2 gap-3">
-                    {[
-                      { icon: MapPin, label: "Affected", value: activeIssue.affected },
-                      { icon: Clock, label: "Urgency", value: activeIssue.urgency },
-                      { icon: TrendingUp, label: "Priority Score", value: `${activeIssue.priority}/100` },
-                      { icon: Shield, label: "Category", value: activeIssue.category },
-                    ].map(({ icon: Icon, label, value }) => (
-                      <div key={label} className="glass-card p-3">
-                        <div className="mb-1 flex items-center gap-2 text-[11px] text-slate-500">
-                          <Icon className="h-3 w-3" /> {label}
-                        </div>
-                        <div className="text-sm font-semibold text-white capitalize">{value}</div>
+          <div className="grid gap-6 lg:grid-cols-5">
+            {/* Left: Details */}
+            <div className="space-y-4 lg:col-span-2">
+              {/* Metadata */}
+              <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Details
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { icon: Target, label: "Priority Score", value: `${selected.score}/100` },
+                    { icon: Shield, label: "Category", value: selected.category },
+                    { icon: Clock, label: "Urgency", value: selected.urgency },
+                    {
+                      icon: Users,
+                      label: "Population Affected",
+                      value: selected.populationAffected.toLocaleString(),
+                    },
+                    { icon: MapPin, label: "Location", value: selected.location },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <Icon className="h-3 w-3" />
+                        {label}
                       </div>
-                    ))}
-                  </div>
-
-                  {/* AI Analysis */}
-                  <div className="glass-card border-l-2 border-l-cyan-500 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                      <Brain className="h-4 w-4 text-cyan-400" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">AI Analysis</span>
+                      <span className="text-xs font-medium capitalize text-zinc-300">
+                        {value}
+                      </span>
                     </div>
-                    <p className="text-sm leading-relaxed text-slate-300">{activeIssue.aiAnalysis}</p>
-                  </div>
+                  ))}
                 </div>
               </div>
-            )}
+
+              {/* Score Breakdown */}
+              <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Score Breakdown
+                </h3>
+                <div className="space-y-2">
+                  {[
+                    { label: "Urgency", weight: 18 },
+                    { label: "Severity", weight: 15 },
+                    { label: "Cascading Risk", weight: 15 },
+                    { label: "Population", weight: 12 },
+                    { label: "Time Sensitivity", weight: 12 },
+                    { label: "Service Criticality", weight: 10 },
+                    { label: "Resource Availability", weight: 10 },
+                    { label: "Confidence", weight: 8 },
+                  ].map(({ label, weight }) => (
+                    <div key={label}>
+                      <div className="mb-1 flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-500">{label}</span>
+                        <span className="text-zinc-600">{weight}%</span>
+                      </div>
+                      <div className="h-1 rounded-full bg-zinc-800">
+                        <div
+                          className="h-full rounded-full bg-sky-500/60"
+                          style={{ width: `${Math.min(100, (selected.score * weight) / 18)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: AI Content */}
+            <div className="space-y-4 lg:col-span-3">
+              {/* AI Source Badge */}
+              {aiSource === "fallback" && (
+                <div className="flex items-center gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-400">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  AI unavailable — showing cached analysis
+                </div>
+              )}
+
+              {/* Enrichment */}
+              <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-sky-400" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    AI Enrichment
+                  </h3>
+                  {loading === "enrich" && (
+                    <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-sky-400" />
+                  )}
+                </div>
+                {loading === "enrich" ? (
+                  <div className="space-y-2">
+                    <div className="h-3 w-full animate-shimmer rounded" />
+                    <div className="h-3 w-4/5 animate-shimmer rounded" />
+                    <div className="h-3 w-3/5 animate-shimmer rounded" />
+                  </div>
+                ) : enrichment ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">
+                        Why it matters
+                      </p>
+                      <p className="text-xs leading-relaxed text-zinc-300">
+                        {enrichment.whyItMatters}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">
+                        Who is affected
+                      </p>
+                      <p className="text-xs leading-relaxed text-zinc-300">
+                        {enrichment.whoIsAffected}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">
+                        Likely next impact
+                      </p>
+                      <p className="text-xs leading-relaxed text-zinc-300">
+                        {enrichment.likelyNextImpact}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border-l-2 border-l-sky-500 bg-sky-500/5 p-3">
+                      <p className="mb-0.5 text-[11px] font-semibold text-sky-400">
+                        Recommendation
+                      </p>
+                      <p className="text-xs leading-relaxed text-zinc-300">
+                        {enrichment.recommendation}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-600">
+                    Select an issue to see AI enrichment.
+                  </p>
+                )}
+              </div>
+
+              {/* Response Plan */}
+              <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50">
+                <button
+                  onClick={() => setExpandedPlan(!expandedPlan)}
+                  className="flex w-full items-center justify-between p-4"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Response Plan
+                    </h3>
+                    {loading === "plan" && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                    )}
+                  </div>
+                  {expandedPlan ? (
+                    <ChevronUp className="h-4 w-4 text-zinc-600" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-zinc-600" />
+                  )}
+                </button>
+                {expandedPlan && (
+                  <div className="border-t border-zinc-800/60 px-4 pb-4">
+                    {loading === "plan" ? (
+                      <div className="space-y-2 pt-3">
+                        <div className="h-3 w-full animate-shimmer rounded" />
+                        <div className="h-3 w-4/5 animate-shimmer rounded" />
+                      </div>
+                    ) : plan ? (
+                      <div className="space-y-3 pt-3">
+                        <div>
+                          <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">
+                            Immediate Action
+                          </p>
+                          <p className="text-xs leading-relaxed text-zinc-300">
+                            {plan.immediateAction}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">
+                            Recommended Team
+                          </p>
+                          <p className="text-xs text-zinc-300">
+                            {plan.recommendedTeam}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="mb-1 text-[11px] font-semibold text-zinc-400">
+                            Required Resources
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {plan.requiredResources.map((r) => (
+                              <span
+                                key={r}
+                                className="inline-flex items-center rounded-md border border-zinc-800 bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-400"
+                              >
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">
+                            Resident Instructions
+                          </p>
+                          <p className="text-xs leading-relaxed text-zinc-300">
+                            {plan.residentInstructions}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3">
+                          <p className="mb-0.5 text-[11px] font-semibold text-orange-400">
+                            Escalation Threshold
+                          </p>
+                          <p className="text-xs leading-relaxed text-zinc-300">
+                            {plan.escalationThreshold}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="pt-3 text-xs text-zinc-600">
+                        Waiting for AI enrichment...
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Alert Drafts */}
+              {alerts.length > 0 && (
+                <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50">
+                  <button
+                    onClick={() => setExpandedAlerts(!expandedAlerts)}
+                    className="flex w-full items-center justify-between p-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-amber-400" />
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Alert Drafts ({alerts.length})
+                      </h3>
+                    </div>
+                    {expandedAlerts ? (
+                      <ChevronUp className="h-4 w-4 text-zinc-600" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-zinc-600" />
+                    )}
+                  </button>
+                  {expandedAlerts && (
+                    <div className="border-t border-zinc-800/60 px-4 pb-4">
+                      <div className="space-y-2 pt-3">
+                        {alerts.map((a, i) => (
+                          <div key={i} className="space-y-2 rounded-lg border border-zinc-800/60 bg-zinc-800/30 p-3">
+                            {a.residentAlert && (
+                              <div>
+                                <p className="mb-0.5 text-[11px] font-semibold text-amber-400">Resident Alert</p>
+                                <p className="text-xs leading-relaxed text-zinc-300">{a.residentAlert}</p>
+                              </div>
+                            )}
+                            {a.volunteerMessage && (
+                              <div>
+                                <p className="mb-0.5 text-[11px] font-semibold text-emerald-400">Volunteer Message</p>
+                                <p className="text-xs leading-relaxed text-zinc-300">{a.volunteerMessage}</p>
+                              </div>
+                            )}
+                            {a.operationsHandoff && (
+                              <div>
+                                <p className="mb-0.5 text-[11px] font-semibold text-sky-400">Operations Handoff</p>
+                                <p className="text-xs leading-relaxed text-zinc-300">{a.operationsHandoff}</p>
+                              </div>
+                            )}
+                            {a.statusUpdate && (
+                              <div>
+                                <p className="mb-0.5 text-[11px] font-semibold text-zinc-400">Status Update</p>
+                                <p className="text-xs leading-relaxed text-zinc-300">{a.statusUpdate}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Chat */}
+              <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-sky-400" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Ask PulseGrid
+                  </h3>
+                </div>
+                <div className="mb-3 max-h-48 space-y-2 overflow-y-auto">
+                  {chat.length === 0 && (
+                    <p className="text-xs text-zinc-600">
+                      Ask about this scenario, priorities, or resources...
+                    </p>
+                  )}
+                  {chat.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                        msg.role === "user"
+                          ? "ml-8 bg-sky-500/10 text-zinc-300"
+                          : "mr-8 bg-zinc-800/60 text-zinc-300"
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="mr-8 rounded-lg bg-zinc-800/60 px-3 py-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendChat()}
+                    placeholder="Ask a question..."
+                    className="flex-1 rounded-lg border border-zinc-800 bg-zinc-800/50 px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600 outline-none transition-colors focus:border-sky-500/40"
+                  />
+                  <button
+                    onClick={sendChat}
+                    disabled={!chatInput.trim() || chatLoading}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500 text-white transition-colors hover:bg-sky-400 disabled:opacity-30"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="mt-20 border-t border-zinc-800/60 pt-6 pb-8 text-center">
+        <p className="text-xs text-zinc-600">
+          PulseGrid &middot; Gen AI Academy APAC Edition Cohort 2
+        </p>
+      </footer>
     </div>
   );
 }
