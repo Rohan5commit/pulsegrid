@@ -9,7 +9,6 @@ import {
   Loader2,
   MapPin,
   Clock,
-  TrendingUp,
   Shield,
   ShieldCheck,
   Brain,
