@@ -33,6 +33,7 @@ import {
 } from "@/lib/schemas/demo-data";
 import type {
   NormalizedIssue,
+  PriorityScore,
   EnrichedContext,
   ResponsePlan,
   AlertDraft,
@@ -46,6 +47,7 @@ type PipelineStep = "ingest" | "normalize" | "rank" | "ready";
 interface RankedIssue extends NormalizedIssue {
   rank: number;
   score: number;
+  breakdown?: PriorityScore["breakdown"];
 }
 
 interface ChatMsg {
@@ -61,7 +63,7 @@ const SCENARIO_ICONS: Record<string, typeof Flame> = {
   "blackout-medical": Zap,
 };
 
-const SCENARIO_COLORS: Record<string, { bg: string; text: string;  badge: string }> = {
+const SCENARIO_COLORS: Record<string, { bg: string; text: string; badge: string }> = {
   "heatwave-water": {
     bg: "bg-red-500/10",
     text: "text-red-400",
@@ -128,28 +130,32 @@ export default function DemoPage() {
     setState("running");
     setPipelineStep("ingest");
 
-    const signals = ALL_SIGNALS[id] || [];
-    await delay(500);
-    setPipelineStep("normalize");
+    try {
+      const signals = ALL_SIGNALS[id] || [];
+      await delay(500);
+      setPipelineStep("normalize");
 
-    const normalized = normalizeSignals(signals);
-    await delay(600);
-    setPipelineStep("rank");
+      const normalized = normalizeSignals(signals);
+      await delay(600);
+      setPipelineStep("rank");
 
-    const scores = rankIssues(normalized);
-    await delay(500);
-    setPipelineStep("ready");
-    await delay(300);
+      const scores = rankIssues(normalized);
+      await delay(500);
+      setPipelineStep("ready");
+      await delay(300);
 
-    const ranked: RankedIssue[] = scores
-      .sort((a, b) => b.score - a.score)
-      .map((s, i) => {
+      // rankIssues already sorts descending and assigns ranks
+      const ranked: RankedIssue[] = scores.map((s) => {
         const issue = normalized.find((n) => n.id === s.issueId)!;
-        return { ...issue, rank: i + 1, score: s.score };
+        return { ...issue, rank: s.rank, score: s.score, breakdown: s.breakdown };
       });
 
-    setIssues(ranked);
-    setState("issues");
+      setIssues(ranked);
+      setState("issues");
+    } catch {
+      setState("select");
+      setScenarioId(null);
+    }
   };
 
   /* ── Select Issue ── */
@@ -269,6 +275,8 @@ export default function DemoPage() {
   /* ── Reset ── */
 
   const goBack = () => {
+    setLoading(null);
+    setChatLoading(false);
     if (state === "detail") {
       setSelected(null);
       setEnrichment(null);
@@ -551,25 +559,31 @@ export default function DemoPage() {
                   Score Breakdown
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    { label: "Urgency", weight: 18 },
-                    { label: "Severity", weight: 15 },
-                    { label: "Cascading Risk", weight: 15 },
-                    { label: "Population", weight: 12 },
-                    { label: "Time Sensitivity", weight: 12 },
-                    { label: "Service Criticality", weight: 10 },
-                    { label: "Resource Availability", weight: 10 },
-                    { label: "Confidence", weight: 8 },
-                  ].map(({ label, weight }) => (
+                  {(selected.breakdown
+                    ? [
+                        { label: "Urgency", value: selected.breakdown.urgencyScore, max: 10 },
+                        { label: "Severity", value: selected.breakdown.severityScore, max: 10 },
+                        { label: "Cascading Risk", value: selected.breakdown.cascadingScore, max: 10 },
+                        { label: "Population", value: selected.breakdown.populationScore, max: 10 },
+                        { label: "Time Sensitivity", value: selected.breakdown.timeScore, max: 10 },
+                        { label: "Service Criticality", value: selected.breakdown.criticalityScore, max: 10 },
+                        { label: "Resource Availability", value: selected.breakdown.resourceScore, max: 10 },
+                        { label: "Confidence", value: selected.breakdown.confidenceScore, max: 10 },
+                      ]
+                    : [
+                        { label: "Urgency", value: 0, max: 10 },
+                        { label: "Severity", value: 0, max: 10 },
+                      ]
+                  ).map(({ label, value, max }) => (
                     <div key={label}>
                       <div className="mb-1 flex items-center justify-between text-[11px]">
                         <span className="text-zinc-500">{label}</span>
-                        <span className="text-zinc-600">{weight}%</span>
+                        <span className="text-zinc-600">{value.toFixed(1)}/{max}</span>
                       </div>
                       <div className="h-1 rounded-full bg-zinc-800">
                         <div
                           className="h-full rounded-full bg-sky-500/60"
-                          style={{ width: `${Math.min(100, (selected.score * weight) / 18)}%` }}
+                          style={{ width: `${(value / max) * 100}%` }}
                         />
                       </div>
                     </div>
